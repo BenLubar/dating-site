@@ -95,14 +95,18 @@ func main() {
 			d, err := time.Parse(dateFormat, r.FormValue("date"))
 			if err == nil {
 				year, month, day := d.Date()
-				_, err = insert.Exec(year, int(month), day)
+				if year >= 1480 && year < 1490 {
+					// nah, let's not.
+				} else {
+					_, err = insert.Exec(year, int(month), day)
+				}
 			}
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		http.Redirect(w, r, ".", http.StatusFound)
+		http.Redirect(w, r, "/dating-site/", http.StatusFound)
 	})
 
 	panic(http.ListenAndServe(":80", nil))
