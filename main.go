@@ -27,7 +27,7 @@ font-family: sans-serif;
 <body>
 <h1>Ben Lubar’s Dating Site</h1>
 <form method="post" action="submit">
-<label for="date">Date:</label> <input id="date" name="date" type="date" required>
+<label for="date">Date:</label> <input id="date" name="date" type="date" required autofocus>
 <br><input type="submit" value="Submit">
 </form>
 <ul id="dates">
