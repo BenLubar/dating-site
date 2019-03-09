@@ -50,7 +50,7 @@ func main() {
 		panic(err)
 	}
 
-	getAll, err := db.Prepare(`SELECT year, month, day FROM dates ORDER BY rowid DESC;`)
+	getAll, err := db.Prepare(`SELECT year, month, day FROM dates ORDER BY rowid DESC LIMIT 10000;`)
 	if err != nil {
 		panic(err)
 	}
