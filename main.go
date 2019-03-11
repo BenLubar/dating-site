@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"html/template"
 	"net/http"
+	"net/url"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -22,16 +23,23 @@ var tmpl = template.Must(template.New("").Parse(`<!DOCTYPE html>
 body {
 font-family: sans-serif;
 }
+.error {
+background: #f77;
+color: #000;
+}
 </style>
 </head>
 <body>
 <h1>Ben Lubar’s Dating Site</h1>
 <form method="post" action="submit">
+{{with .Error -}}
+<div class="error">{{.}}</div>
+{{end -}}
 <label for="date">Date:</label> <input id="date" name="date" type="date" required autofocus>
 <br><input type="submit" value="Submit">
 </form>
 <ul id="dates">
-{{range . -}}
+{{range .Dates -}}
 <li>{{.}}</li>
 {{end -}}
 </ul>
@@ -73,7 +81,11 @@ func main() {
 		}
 		defer dates.Close()
 
-		var dateStrings []string
+		var data struct {
+			Error string
+			Dates []string
+		}
+		data.Error = r.URL.Query().Get("error")
 
 		for dates.Next() {
 			var year, month, day int
@@ -81,18 +93,23 @@ func main() {
 				panic(err)
 			}
 
-			dateStrings = append(dateStrings, time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC).Format(dateFormat))
+			data.Dates = append(data.Dates, time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC).Format(dateFormat))
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		tmpl.Execute(w, dateStrings)
+		if data.Error != "" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		tmpl.Execute(w, data)
 	})
 
 	http.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, no-cache")
 
+		var err error
 		if r.Method == http.MethodPost {
-			d, err := time.Parse(dateFormat, r.FormValue("date"))
+			var d time.Time
+			d, err = time.Parse(dateFormat, r.FormValue("date"))
 			if err == nil {
 				year, month, day := d.Date()
 				if year >= 1480 && year < 1490 {
@@ -101,12 +118,13 @@ func main() {
 					_, err = insert.Exec(year, int(month), day)
 				}
 			}
-			if err != nil {
-				panic(err)
-			}
 		}
 
-		http.Redirect(w, r, "/dating-site/", http.StatusFound)
+		path := "/dating-site/"
+		if err != nil {
+			path += "?error=" + url.QueryEscape(err.Error())
+		}
+		http.Redirect(w, r, path, http.StatusFound)
 	})
 
 	panic(http.ListenAndServe(":80", nil))
